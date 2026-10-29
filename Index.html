@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#E8ECF1">
+<title>ลงเวลา</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------- tokens ---------- */
+:root {
+  --ground: #E8ECF1;
+  --slip: #FFFFFF;
+  --ink: #0F1E33;
+  --ink-2: #4A5A70;
+  --line: #CBD3DE;
+  --tick: #A5B1C2;
+  --blue: #1F47C9;
+  --red: #D63A1F;
+  --green: #0B7F57;
+  --amber: #9A5B00;
+  --on-accent: #FFFFFF;
+  --seg-on: #FFFFFF;
+  --accent: var(--blue);
+  --shadow: 0 1px 0 rgba(15, 30, 51, .06), 0 10px 30px -12px rgba(15, 30, 51, .28);
+  --display: "Bai Jamjuree", "Noto Sans Thai", "Sukhumvit Set", "Leelawadee UI", system-ui, sans-serif;
+  --body: "Noto Sans Thai", "Sukhumvit Set", "Leelawadee UI", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #0A1422;
+    --slip: #12233A;
+    --ink: #E8EEF6;
+    --ink-2: #9FB0C5;
+    --line: #243753;
+    --tick: #3A4C68;
+    --blue: #4E78FF;
+    --red: #F2634A;
+    --green: #3DD6A0;
+    --amber: #F2B24B;
+    --seg-on: #2B4264;
+    --shadow: 0 1px 0 rgba(0, 0, 0, .4), 0 12px 32px -12px rgba(0, 0, 0, .7);
+  }
+}
+body[data-mode="OUT"] { --accent: var(--red); }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: var(--ground); }
+body {
+  margin: 0; min-height: 100vh; min-height: 100svh;
+  background: var(--ground); color: var(--ink);
+  font: 400 16px/1.5 var(--body);
+  -webkit-text-size-adjust: 100%;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+p { margin: 0; }
+
+/* ---------- layout ---------- */
+.app {
+  width: 100%; max-width: 460px; margin: 0 auto;
+  min-height: 100vh; min-height: 100svh;
+  padding: max(14px, env(safe-area-inset-top)) 20px max(14px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column;
+}
+.top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.brand { font: 600 16px/1.2 var(--display); letter-spacing: .01em; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand svg { flex: none; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent;
+  display: grid; place-items: center; color: var(--ink-2);
+}
+.icon-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.icon-btn:focus-visible, .link:focus-visible, .seg button:focus-visible, .btn:focus-visible, input:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+
+.clock { text-align: center; padding-top: clamp(4px, 1.6svh, 16px); }
+.date { font-size: 15px; color: var(--ink-2); }
+.greet { font: 600 17px/1.3 var(--display); margin-bottom: 2px; }
+.time {
+  font: 600 clamp(58px, 17vw, 82px)/1 var(--display);
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums; margin-top: 2px;
+}
+
+/* ruled strip: where you are */
+.where {
+  margin-top: clamp(10px, 2.4svh, 22px);
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; column-gap: 12px;
+  padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  min-height: 68px;
+}
+.where-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--blue); position: relative; margin-left: 2px; }
+.where[data-tone="ok"] .where-dot { background: var(--green); }
+.where[data-tone="warn"] .where-dot { background: var(--amber); }
+.where[data-tone="bad"] .where-dot { background: var(--red); }
+.where[data-tone="info"] .where-dot::after {
+  content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--blue);
+  animation: ping 1.6s ease-out infinite;
+}
+@keyframes ping { from { transform: scale(.5); opacity: .9; } to { transform: scale(1.5); opacity: 0; } }
+.where-title { font-weight: 600; line-height: 1.3; }
+.where .link { min-height: 32px; padding: 2px 0; font-size: 14.5px; }
+.where-sub { font-size: 14px; color: var(--ink-2); line-height: 1.35; }
+.acc { display: flex; align-items: flex-end; gap: 3px; height: 18px; }
+.acc i { width: 5px; border-radius: 1px; background: var(--line); }
+.acc i:nth-child(1) { height: 7px; } .acc i:nth-child(2) { height: 12px; } .acc i:nth-child(3) { height: 18px; }
+.acc[data-level="1"] i:nth-child(-n+1), .acc[data-level="2"] i:nth-child(-n+2), .acc[data-level="3"] i { background: var(--ink); }
+.acc[data-level="1"] i:nth-child(-n+1) { background: var(--amber); }
+
+/* the dial (primary action) */
+.stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0; gap: 6px; }
+.dial {
+  --size: clamp(190px, 34svh, 300px);
+  width: var(--size); height: var(--size); padding: 0; border: 0; background: transparent; border-radius: 50%;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.dial svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.dial .disc { fill: var(--accent); transition: fill .2s; transform-box: fill-box; transform-origin: center; }
+.dial:active .disc { transform: scale(.965); }
+.dial .halo { fill: none; stroke: var(--accent); stroke-opacity: .18; stroke-width: 2; }
+.dial .print { stroke: var(--on-accent); fill: none; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.dial .tick { stroke: var(--tick); stroke-linecap: round; }
+.dial .tick.lit { stroke: var(--accent); }
+.dial[data-state="busy"] .print { animation: scan 1.1s ease-in-out infinite; }
+@keyframes scan { 50% { opacity: .45; } }
+.dial[data-state="err"] .disc { fill: var(--ink-2); }
+.dial:focus-visible { outline: 3px solid var(--accent); outline-offset: 8px; }
+
+.msg { min-height: 48px; text-align: center; max-width: 330px; }
+.msg p { color: var(--ink-2); font-size: 15px; line-height: 1.4; }
+.msg[data-kind="error"] p { color: var(--red); font-weight: 500; }
+.link {
+  border: 0; background: none; padding: 8px 4px; min-height: 44px; color: var(--accent);
+  font-weight: 600; text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* mode switch */
+.seg {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent); border-radius: 14px;
+}
+.seg button {
+  min-height: 46px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font-weight: 500;
+  transition: background .15s, color .15s;
+}
+.seg button[aria-checked="true"] { background: var(--seg-on); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 30, 51, .18); }
+.seg button[aria-checked="true"][data-mode="IN"] { background: var(--blue); color: #fff; }
+.seg button[aria-checked="true"][data-mode="OUT"] { background: var(--red); color: #fff; }
+
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; margin-top: 6px; font-size: 14px; color: var(--ink-2); }
+.foot .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.foot .link { font-size: 14px; }
+
+/* ---------- sheets ---------- */
+dialog.sheet {
+  width: 100%; max-width: 460px; margin: auto auto 0; padding: 0; border: 0;
+  background: var(--ground); color: var(--ink);
+  border-radius: 22px 22px 0 0; max-height: 94vh; max-height: 94svh; overflow: auto;
+  animation: rise .28s cubic-bezier(.2, .9, .3, 1);
+}
+dialog.sheet::backdrop { background: rgba(7, 14, 25, .55); }
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+.sheet-in { padding: 22px 20px max(20px, env(safe-area-inset-bottom)); }
+.sheet h2 { font: 700 22px/1.25 var(--display); margin: 0 0 6px; }
+.sheet .lead { color: var(--ink-2); font-size: 15px; margin-bottom: 18px; }
+.close { position: absolute; top: 8px; right: 8px; }
+
+.field { display: block; margin-bottom: 14px; }
+.field span { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+.field input {
+  width: 100%; min-height: 52px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: var(--slip); font-size: 18px; letter-spacing: .02em;
+}
+.field input.code { font-family: var(--display); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.reg-who { margin: 0 0 12px; font: 600 17px/1.3 var(--display); }
+.form-msg { min-height: 24px; margin: 2px 0 10px; font-size: 14.5px; color: var(--red); font-weight: 500; }
+.btn {
+  width: 100%; min-height: 54px; border: 0; border-radius: 14px; font-weight: 600; font-size: 17px;
+  background: var(--accent); color: var(--on-accent);
+}
+.btn[disabled] { opacity: .55; cursor: progress; }
+.btn.quiet { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
+
+.done { text-align: center; padding: 18px 0 6px; }
+.done svg { margin: 0 auto 10px; display: block; }
+
+.checks { list-style: none; margin: 0 0 18px; padding: 0; }
+.checks li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.checks li b { display: block; font-weight: 600; }
+.checks li small { color: var(--ink-2); font-size: 13.5px; }
+.checks .mk { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-top: 2px; }
+.checks .ok .mk { background: var(--green); color: #fff; }
+.checks .no .mk { background: var(--red); color: #fff; }
+.checks .wait .mk { background: var(--ink-2); color: #fff; }
+.steps { margin: 0 0 18px; padding-left: 22px; color: var(--ink); font-size: 15px; }
+.steps li { margin-bottom: 6px; }
+.tech { font-size: 12.5px; color: var(--ink-2); word-break: break-all; margin-top: 14px; }
+
+/* ---------- result: the time slip ---------- */
+dialog.result { max-height: 100vh; max-height: 100svh; border-radius: 0; margin: 0 auto; height: 100%; }
+dialog.result[data-type="IN"] { --accent: var(--blue); }
+dialog.result[data-type="OUT"] { --accent: var(--red); }
+.result .sheet-in { padding-top: max(20px, env(safe-area-inset-top)); display: flex; flex-direction: column; min-height: 100%; }
+.slip { position: relative; background: var(--slip); border-radius: 16px; box-shadow: var(--shadow); padding: 20px 20px 18px; margin-top: 8px; }
+.slip-head { padding-right: 130px; min-height: 52px; }
+.slip-name { font: 600 19px/1.25 var(--display); }
+.slip-id { font-size: 14px; color: var(--ink-2); }
+.stamp {
+  position: absolute; top: 16px; right: 16px; transform: rotate(-7deg);
+  border: 3px solid var(--accent); outline: 1.5px solid var(--accent); outline-offset: 3px; border-radius: 8px;
+  color: var(--accent); font: 700 21px/1 var(--display); padding: 6px 12px 7px; letter-spacing: .02em;
+  animation: stamp .38s cubic-bezier(.2, 1.5, .4, 1) .12s both;
+}
+@keyframes stamp { from { transform: rotate(-7deg) scale(1.8); opacity: 0; } to { transform: rotate(-7deg) scale(1); opacity: .94; } }
+.big-time { font: 700 clamp(64px, 20vw, 88px)/1 var(--display); letter-spacing: -.015em; font-variant-numeric: tabular-nums; margin-top: 18px; }
+.big-time small { font-size: .32em; font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-left: 4px; }
+.big-date { color: var(--ink-2); margin-top: 6px; }
+.dur { margin-top: 10px; font-weight: 600; color: var(--accent); }
+.perf { position: relative; margin: 20px -20px 18px; border-top: 2px dashed var(--line); }
+.perf::before, .perf::after { content: ""; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--ground); }
+.perf::before { left: -11px; } .perf::after { right: -11px; }
+.place { display: grid; grid-template-columns: 24px 1fr; gap: 12px; }
+.place svg { margin-top: 2px; color: var(--ink-2); }
+.place-name { font-weight: 600; }
+.pill { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; color: #fff; background: var(--ink-2); }
+.pill[data-s="INSIDE"] { background: var(--green); color: #fff; }
+.pill[data-s="OUTSIDE"] { background: var(--amber); color: #fff; }
+@media (prefers-color-scheme: dark) { .pill[data-s="INSIDE"], .pill[data-s="OUTSIDE"] { color: #0A1422; } }
+.place-addr { color: var(--ink-2); font-size: 14.5px; line-height: 1.4; margin-top: 2px; }
+.place-meta { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+.dup { background: color-mix(in srgb, var(--amber) 16%, transparent); border-radius: 10px; padding: 10px 12px; font-size: 14.5px; margin-bottom: 14px; }
+.recent { margin-top: 22px; flex: 1; }
+.recent h3 { font: 600 16px/1.3 var(--display); margin: 0 0 4px; }
+.recent ul { list-style: none; margin: 0; padding: 0; }
+.recent li { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.recent li .ar { color: var(--blue); } .recent li[data-t="OUT"] .ar { color: var(--red); }
+.recent li .site { color: var(--ink-2); font-size: 13.5px; display: block; line-height: 1.3; }
+.recent li time { font: 600 15px var(--display); font-variant-numeric: tabular-nums; }
+.result .sticky { position: sticky; bottom: 0; padding: 14px 0 max(4px, env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--ground) 70%, transparent); margin-top: 12px; }
+
+@media (max-height: 700px) {
+  .clock { padding-top: 0; }
+  .time { font-size: clamp(50px, 15vw, 64px); }
+  .where { margin-top: 8px; min-height: 60px; padding: 6px 0; }
+  .foot { min-height: 44px; margin-top: 2px; }
+  .stage { padding: 4px 0; gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+</style>
+</head>
+<body data-mode="AUTO">
+<main class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span id="company"></span>
+    </div>
+    <button class="icon-btn" id="btnHelp" type="button" aria-label="วิธีใช้และตรวจสอบเครื่อง">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2.9-1.2 1.8M12 16.8v.1"/></svg>
+    </button>
+  </header>
+
+  <section class="clock" aria-label="เวลาปัจจุบัน">
+    <p class="greet" id="greet" hidden></p>
+    <p class="date" id="dateLine">&nbsp;</p>
+    <p class="time" id="clock" aria-live="off">--:--</p>
+  </section>
+
+  <section class="where" id="where" data-tone="info" aria-live="polite">
+    <span class="where-dot" aria-hidden="true"></span>
+    <div>
+      <p class="where-title" id="whereTitle">กำลังหาตำแหน่ง…</p>
+      <p class="where-sub" id="whereSub">อนุญาตตำแหน่งเมื่อเบราว์เซอร์ถาม</p>
+      <button class="link" id="geoAllow" type="button">อนุญาตตำแหน่ง</button>
+    </div>
+    <div class="acc" id="acc" data-level="0" aria-hidden="true"><i></i><i></i><i></i></div>
+    <button class="icon-btn" id="btnGeo" type="button" aria-label="หาตำแหน่งใหม่">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>
+    </button>
+  </section>
+
+  <section class="stage">
+    <button class="dial" id="dial" type="button" data-state="idle" aria-label="สแกนลายนิ้วมือเพื่อลงเวลา">
+      <svg viewBox="0 0 300 300" aria-hidden="true">
+        <g id="ticks"></g>
+        <circle class="halo" cx="150" cy="150" r="122"/>
+        <circle class="disc" cx="150" cy="150" r="108"/>
+        <g transform="translate(150 150) scale(1.5)">
+          <g class="print">
+            <path d="M-26 9V3a26 26 0 0 1 52 0v6"/>
+            <path d="M-19 22V3a19 19 0 0 1 38 0v12"/>
+            <path d="M-12 26V3a12 12 0 0 1 24 0v18"/>
+            <path d="M-5 24V3a5 5 0 0 1 10 0v6"/>
+            <path d="M-26 18v6M26 18v2"/>
+          </g>
+        </g>
+      </svg>
+    </button>
+    <div class="msg" id="msg" data-kind="hint" role="status" aria-live="polite">
+      <p id="msgText">แตะหน้าปัดเพื่อสแกนลายนิ้วมือ</p>
+      <button class="link" id="msgAct" type="button" hidden></button>
+    </div>
+  </section>
+
+  <div class="seg" id="seg" role="radiogroup" aria-label="ประเภทการลงเวลา">
+    <button type="button" role="radio" aria-checked="true" data-mode="AUTO">อัตโนมัติ</button>
+    <button type="button" role="radio" aria-checked="false" data-mode="IN" tabindex="-1">เข้างาน</button>
+    <button type="button" role="radio" aria-checked="false" data-mode="OUT" tabindex="-1">ออกงาน</button>
+  </div>
+
+  <footer class="foot">
+    <span class="who" id="who"></span>
+    <button class="link" id="btnReg" type="button">ลงทะเบียนลายนิ้วมือ</button>
+  </footer>
+</main>
+
+<!-- ลงทะเบียน -->
+<dialog class="sheet" id="dlgReg" aria-labelledby="regTitle">
+  <div class="sheet-in">
+    <button class="icon-btn close" type="button" data-close aria-label="ปิด">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <form id="regForm" autocomplete="off" novalidate>
+      <h2 id="regTitle">ลงทะเบียนลายนิ้วมือ</h2>
+      <p class="lead">ทำครั้งเดียวต่อเครื่อง ลายนิ้วมืออยู่ในเครื่องของคุณเท่านั้น ระบบไม่เก็บภาพลายนิ้วมือ</p>
+      <label class="field"><span>รหัสพนักงาน</span>
+        <input id="regEmp" name="emp" type="text" inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next" required>
+      </label>
+      <label class="field"><span>รหัสลงทะเบียนจากแอดมิน</span>
+        <input id="regCode" class="code" name="code" type="text" inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="9" placeholder="XXXX-XXXX" enterkeyhint="go" required>
+      </label>
+      <p class="form-msg" id="regMsg" role="alert"></p>
+      <p class="reg-who" id="regWho" hidden></p>
+      <button class="btn" id="regGo" type="submit">ลงทะเบียนและสแกนนิ้ว</button>
+    </form>
+    <div class="done" id="regDone" hidden>
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="var(--green)"/><path d="M19 33l9 9 17-19" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h2>ลงทะเบียนเครื่องนี้แล้ว</h2>
+      <p class="lead" id="regDoneText"></p>
+      <button class="btn" type="button" data-close>เริ่มลงเวลา</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- วิธีใช้ -->
+<dialog class="sheet" id="dlgHelp" aria-labelledby="helpTitle">
+  <div class="sheet-in">
+    <button class="icon-btn close" type="button" data-close aria-label="ปิด">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <h2 id="helpTitle">วิธีใช้</h2>
+    <ol class="steps">
+      <li>ลงทะเบียนเครื่องนี้ครั้งเดียว ด้วยรหัสพนักงานและรหัสลงทะเบียนจากแอดมิน</li>
+      <li>แตะหน้าปัด แล้ววางนิ้วบนเซ็นเซอร์ หรือทำตามหน้าจอ</li>
+      <li>ระบบบันทึกเวลาและตำแหน่งให้เอง ครั้งแรกคือเข้างาน ครั้งถัดไปคือออกงาน</li>
+    </ol>
+    <h2 style="font-size:18px">ตรวจสอบเครื่อง</h2>
+    <ul class="checks" id="checks"></ul>
+    <p class="lead" style="margin-bottom:0">ใช้เหมือนแอปได้ เปิดลิงก์นี้ใน Chrome แล้วเลือก “เพิ่มไปที่หน้าจอหลัก” (iPhone: Safari &gt; แชร์ &gt; เพิ่มไปยังหน้าจอโฮม)</p>
+    <p class="tech" id="tech"></p>
+  </div>
+</dialog>
+
+<!-- ผลลัพธ์: สลิปตอกบัตร -->
+<dialog class="sheet result" id="dlgResult" aria-labelledby="resName">
+  <div class="sheet-in">
+    <div class="dup" id="resDup" hidden>เพิ่งบันทึกไปเมื่อครู่ จึงไม่บันทึกซ้ำ</div>
+    <article class="slip">
+      <div class="stamp" id="resStamp"></div>
+      <div class="slip-head">
+        <p class="slip-name" id="resName"></p>
+        <p class="slip-id" id="resId"></p>
+      </div>
+      <p class="big-time" id="resTime"></p>
+      <p class="big-date" id="resDate"></p>
+      <p class="dur" id="resDur" hidden></p>
+      <div class="perf" aria-hidden="true"></div>
+      <div class="place">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+        <div>
+          <p class="place-name"><span id="resSite"></span><span class="pill" id="resPill"></span></p>
+          <p class="place-addr" id="resAddr"></p>
+          <div class="place-meta"><span id="resDist"></span><span id="resAcc"></span></div>
+          <a class="link" id="resMap" href="#" target="_blank" rel="noopener" style="display:inline-block;padding-left:0">ดูตำแหน่งบนแผนที่</a>
+        </div>
+      </div>
+    </article>
+    <section class="recent" id="resRecent">
+      <h3>ประวัติล่าสุดของคุณ</h3>
+      <ul id="resList"></ul>
+    </section>
+    <div class="sticky"><button class="btn" id="resDone" type="button">เสร็จสิ้น</button></div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+  var BOOT = <?!= boot ?>;
+
+  /* ---------- helpers ---------- */
+  var $ = function (s, el) { return (el || document).querySelector(s); };
+  var store = {
+    get: function (k) { try { return JSON.parse(localStorage.getItem('fs.' + k)); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem('fs.' + k, JSON.stringify(v)); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem('fs.' + k); } catch (e) {} }
+  };
+  /* เรียกเซิร์ฟเวอร์: ถ้าเปิดใน Apps Script ใช้ google.script.run
+     ถ้าเป็นหน้าที่โฮสต์ภายนอก (window.FS_API) ใช้ fetch ไปที่ URL ของเว็บแอป */
+  function rpc(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (window.FS_API) {
+      return fetch(window.FS_API, {
+        method: 'POST', redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fn: fn, args: args })
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      if (!window.google || !google.script || !google.script.run) { reject(new Error('ไม่พบ google.script.run')); return; }
+      var r = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      r[fn].apply(r, args);
+    });
+  }
+  function b64u(buf) {
+    var b = new Uint8Array(buf), s = '';
+    for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function unb64u(str) {
+    str = String(str).replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) str += '=';
+    var bin = atob(str), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out.buffer;
+  }
+  function haptic(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  var DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  var MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  function dist(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' กม.' : Math.round(m) + ' ม.'; }
+  function haversine(a, b, c, d) {
+    var R = 6371008.8, r = Math.PI / 180, dLa = (c - a) * r, dLo = (d - b) * r;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a * r) * Math.cos(c * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  }
+  function deviceLabel() {
+    var ua = navigator.userAgent || '', os = 'อุปกรณ์', br = '';
+    if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS'; else if (/Android/.test(ua)) os = 'Android';
+    else if (/Windows/.test(ua)) os = 'Windows'; else if (/Mac OS X/.test(ua)) os = 'macOS'; else if (/Linux/.test(ua)) os = 'Linux';
+    if (/EdgA?\//.test(ua)) br = 'Edge'; else if (/SamsungBrowser/.test(ua)) br = 'Samsung Internet';
+    else if (/Firefox|FxiOS/.test(ua)) br = 'Firefox'; else if (/Chrome|CriOS/.test(ua)) br = 'Chrome';
+    else if (/Safari/.test(ua)) br = 'Safari';
+    return (os + ' ' + br).trim();
+  }
+
+  /* ---------- state ---------- */
+  var caps = { webauthn: !!(window.PublicKeyCredential && navigator.credentials), secure: window.isSecureContext !== false, uvpa: null, policy: null, geoPerm: 'unknown' };
+  var geo = { state: 'locating', fix: null, watch: null };
+  var busy = false;
+  var mode = 'AUTO';
+  var pre = null; // challenge ที่ขอไว้ล่วงหน้า (Safari ต้องเรียก WebAuthn ทันทีหลังแตะ)
+
+  $('#company').textContent = BOOT.company;
+  document.title = BOOT.company + ' – ลงเวลา';
+
+  /* ---------- clock + dial ---------- */
+  var NS = 'http://www.w3.org/2000/svg';
+  var ticksG = $('#ticks'), tickEls = [];
+  for (var i = 0; i < 60; i++) {
+    var major = i % 5 === 0, ln = document.createElementNS(NS, 'line');
+    ln.setAttribute('x1', 150); ln.setAttribute('x2', 150);
+    ln.setAttribute('y1', major ? 4 : 8); ln.setAttribute('y2', major ? 22 : 18);
+    ln.setAttribute('transform', 'rotate(' + (i * 6) + ' 150 150)');
+    ln.setAttribute('class', 'tick');
+    ln.setAttribute('stroke-width', major ? 4 : 2.5);
+    ticksG.appendChild(ln); tickEls.push(ln);
+  }
+  var sweepPos = 0, sweepTimer = null;
+  function paintSweep(head) {
+    for (var k = 0; k < 60; k++) {
+      var d = (head - k + 60) % 60, el = tickEls[k];
+      if (d <= 12) { el.setAttribute('class', 'tick lit'); el.style.opacity = d === 0 ? 1 : Math.max(.25, 1 - d * .07); }
+      else { el.setAttribute('class', 'tick'); el.style.opacity = ''; }
+    }
+  }
+  function tickClock() {
+    var n = new Date();
+    $('#clock').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
+    $('#dateLine').textContent = 'วัน' + DAYS[n.getDay()] + 'ที่ ' + n.getDate() + ' ' + MONTHS[n.getMonth()] + ' ' + (n.getFullYear() + 543);
+    if (!sweepTimer) paintSweep(n.getSeconds());
+    setTimeout(tickClock, 1000 - n.getMilliseconds() + 5);
+  }
+  tickClock();
+  function setBusy(b) {
+    busy = b;
+    var dial = $('#dial');
+    dial.setAttribute('data-state', b ? 'busy' : 'idle');
+    dial.setAttribute('aria-busy', b ? 'true' : 'false');
+    if (b && !sweepTimer) {
+      sweepPos = new Date().getSeconds();
+      sweepTimer = setInterval(function () { sweepPos = (sweepPos + 1) % 60; paintSweep(sweepPos); }, 38);
+    } else if (!b && sweepTimer) {
+      clearInterval(sweepTimer); sweepTimer = null; paintSweep(new Date().getSeconds());
+    }
+  }
+
+  /* ---------- message line ---------- */
+  function say(text, kind, actLabel, act) {
+    var m = $('#msg'), t = $('#msgText'), a = $('#msgAct');
+    m.setAttribute('data-kind', kind || 'hint');
+    t.textContent = text;
+    if (actLabel) { a.hidden = false; a.textContent = actLabel; a.onclick = act; } else { a.hidden = true; a.onclick = null; }
+  }
+  function hint() { say('แตะหน้าปัดเพื่อสแกนลายนิ้วมือ', 'hint'); }
+
+  /* ---------- who ---------- */
+  function paintWho() {
+    var me = store.get('me');
+    $('#greet').hidden = !(me && me.name);
+    if (me && me.name) $('#greet').textContent = 'สวัสดี ' + me.name;
+    if (me && me.name) {
+      $('#who').innerHTML = '';
+      var s = document.createElement('span'); s.textContent = 'ลงเวลาในชื่อ ' + me.name;
+      $('#who').appendChild(s);
+      $('#btnReg').textContent = 'ไม่ใช่คุณ? เปลี่ยน';
+    } else {
+      $('#who').textContent = 'เครื่องนี้ยังไม่ได้ลงทะเบียน';
+      $('#btnReg').textContent = 'ลงทะเบียนลายนิ้วมือ';
+    }
+  }
+
+  /* ---------- location ---------- */
+  function toFix(p) { return { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy, at: Date.now() }; }
+  function paintWhere() {
+    var w = $('#where'), T = $('#whereTitle'), S = $('#whereSub'), acc = $('#acc'), lvl = 0, tone = 'info';
+    if (geo.state === 'denied') {
+      tone = 'bad';
+      if (geoBlockedByFrame()) {
+        T.textContent = 'หน้านี้ขอตำแหน่งไม่ได้'; S.textContent = 'กรอบหน้าเว็บของ Apps Script บล็อกตำแหน่ง แจ้งแอดมิน';
+      } else {
+        T.textContent = 'ยังไม่ได้อนุญาตตำแหน่ง';
+        S.textContent = 'แตะ “อนุญาตตำแหน่ง” หรือเปิดตำแหน่งให้เบราว์เซอร์นี้ในการตั้งค่า';
+      }
+    } else if (geo.state === 'unavailable') {
+      tone = 'bad'; T.textContent = 'หาตำแหน่งไม่ได้'; S.textContent = 'เปิด GPS ในเครื่อง หรือออกไปที่โล่ง แล้วแตะหาใหม่';
+    } else if (geo.state === 'ready' && geo.fix) {
+      var f = geo.fix, a = Math.round(f.accuracy);
+      lvl = a <= 30 ? 3 : a <= 100 ? 2 : 1;
+      var best = null, bd = Infinity;
+      (BOOT.sites || []).forEach(function (s) { var d = haversine(f.lat, f.lng, s.lat, s.lng); if (d < bd) { bd = d; best = s; } });
+      if (!best) { tone = 'ok'; T.textContent = 'ได้ตำแหน่งแล้ว'; S.textContent = 'แม่นยำ ±' + a + ' ม.'; }
+      else if (bd <= best.radius) { tone = 'ok'; T.textContent = 'อยู่ในพื้นที่ ' + best.name; S.textContent = 'ห่าง ' + dist(bd) + ' แม่นยำ ±' + a + ' ม.'; }
+      else {
+        tone = 'warn'; T.textContent = 'นอกพื้นที่ ใกล้' + best.name;
+        S.textContent = 'ห่าง ' + dist(bd) + ' อนุญาตภายใน ' + dist(best.radius) + (BOOT.blockOutside ? ' ลงเวลาไม่ได้จนกว่าจะเข้าพื้นที่' : '');
+      }
+      if (a > 150) S.textContent += ' สัญญาณอ่อน ลองออกที่โล่ง';
+    } else {
+      T.textContent = 'กำลังหาตำแหน่ง…'; S.textContent = 'อนุญาตตำแหน่งเมื่อเบราว์เซอร์ถาม';
+    }
+    w.setAttribute('data-tone', tone); acc.setAttribute('data-level', String(lvl));
+    $('#geoAllow').hidden = geo.state === 'ready';
+  }
+  function geoBlockedByFrame() {
+    try { var pp = document.permissionsPolicy || document.featurePolicy; return !!(pp && pp.allowsFeature && !pp.allowsFeature('geolocation')); } catch (e) { return false; }
+  }
+  // ต้องกดเอง: iOS Safari และบางเบราว์เซอร์จะถามสิทธิ์ตำแหน่งเมื่อมีการแตะเท่านั้น
+  $('#geoAllow').addEventListener('click', function () {
+    geo.state = 'locating'; paintWhere();
+    freshFix(15000).then(function () { startGeo(); }).catch(function (e) { onGeoErr(e || {}); });
+  });
+  function onFix(p) { geo.fix = toFix(p); geo.state = 'ready'; paintWhere(); }
+  function onGeoErr(e) {
+    if (e && e.code === 1) geo.state = 'denied';
+    else if (!geo.fix) geo.state = (e && e.code === 3) ? 'locating' : 'unavailable';
+    paintWhere();
+  }
+  function startGeo() {
+    if (!navigator.geolocation) { geo.state = 'unavailable'; paintWhere(); return; }
+    stopGeo(); if (!geo.fix) geo.state = 'locating'; paintWhere();
+    geo.watch = navigator.geolocation.watchPosition(onFix, onGeoErr, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
+  }
+  function stopGeo() { if (geo.watch !== null) { try { navigator.geolocation.clearWatch(geo.watch); } catch (e) {} geo.watch = null; } }
+  function freshFix(timeout) {
+    return new Promise(function (res, rej) {
+      if (!navigator.geolocation) { rej(new Error('no geolocation')); return; }
+      navigator.geolocation.getCurrentPosition(function (p) { geo.fix = toFix(p); geo.state = 'ready'; paintWhere(); res(geo.fix); }, rej,
+        { enableHighAccuracy: true, maximumAge: 20000, timeout: timeout || 10000 });
+    });
+  }
+  $('#btnGeo').addEventListener('click', function () { geo.state = 'locating'; geo.fix = null; paintWhere(); startGeo(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stopGeo(); else { startGeo(); if (!pre || Date.now() - pre.at > 120000) prefetch(); }
+  });
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(function (st) {
+        caps.geoPerm = st.state;
+        st.onchange = function () { caps.geoPerm = st.state; if (st.state === 'granted') startGeo(); };
+      }).catch(function () {});
+    }
+  } catch (e) {}
+
+  /* ---------- challenge ---------- */
+  function prefetch() {
+    return rpc('beginAuth').then(function (r) { if (r && r.ok) pre = { ch: r.challenge, at: Date.now() }; }).catch(function () {});
+  }
+  function takeChallenge() {
+    if (pre && Date.now() - pre.at < 150000) { var c = pre; pre = null; return Promise.resolve(c); }
+    return rpc('beginAuth').then(function (r) {
+      if (!r || !r.ok) throw new Error('ขอรหัสสแกนไม่สำเร็จ');
+      return { ch: r.challenge, at: Date.now() };
+    });
+  }
+
+  /* ---------- errors ---------- */
+  function isDomErr(e) { return !!(e && window.DOMException && e instanceof DOMException); }
+  function waMessage(e, creating) {
+    var name = e && e.name, msg = (e && e.message) || '';
+    if (/permissions? policy|feature policy|publickey-credentials/i.test(msg)) {
+      return { text: 'หน้านี้ถูกบล็อกไม่ให้ใช้ลายนิ้วมือ (Permissions Policy ของ Apps Script) เปิดเมนูวิธีใช้เพื่อดูรายละเอียด', kind: 'error' };
+    }
+    switch (name) {
+      case 'NotAllowedError':
+        return { text: creating ? 'ยกเลิกหรือหมดเวลา แตะลงทะเบียนอีกครั้ง' : 'ยกเลิกหรือหมดเวลา แตะหน้าปัดเพื่อสแกนอีกครั้ง ถ้าเครื่องนี้ยังไม่เคยลงทะเบียน ให้ลงทะเบียนก่อน', kind: 'error' };
+      case 'InvalidStateError':
+        return { text: 'เครื่องนี้ลงทะเบียนไว้แล้ว ใช้สแกนลงเวลาได้เลย', kind: 'error' };
+      case 'SecurityError':
+        return { text: 'เบราว์เซอร์ไม่อนุญาตให้ใช้ลายนิ้วมือกับที่อยู่เว็บนี้ ลองเปิดลิงก์ใน Chrome หรือ Safari โดยตรง', kind: 'error' };
+      case 'NotSupportedError':
+        return { text: 'เครื่องนี้ไม่รองรับลายนิ้วมือสำหรับเว็บ ตรวจว่าเปิดล็อกหน้าจอด้วยลายนิ้วมือแล้ว', kind: 'error' };
+      case 'AbortError':
+        return { text: 'การสแกนถูกยกเลิก ลองอีกครั้ง', kind: 'error' };
+      default:
+        return { text: 'สแกนไม่สำเร็จ (' + (name || 'ไม่ทราบสาเหตุ') + ') ลองอีกครั้ง', kind: 'error' };
+    }
+  }
+
+  /* ---------- scan ---------- */
+  function scan() {
+    if (busy) return;
+    if (!caps.webauthn) {
+      say('เบราว์เซอร์นี้ไม่รองรับการสแกนลายนิ้วมือ ลองเปิดใน Chrome หรือ Safari รุ่นล่าสุด', 'error'); return;
+    }
+    setBusy(true); haptic(12);
+    say('วางนิ้วบนเซ็นเซอร์ หรือทำตามหน้าจอ', 'hint');
+    var chal = null, geoP = null, assertion = null;
+
+    var geoStep;
+    if (geo.state === 'ready') { geoP = freshFix(8000).catch(function () { return geo.fix; }); geoStep = Promise.resolve(); }
+    else if (BOOT.requireLocation) {
+      say('กำลังหาตำแหน่ง…', 'hint');
+      geoStep = freshFix(10000).then(function () { say('วางนิ้วบนเซ็นเซอร์ หรือทำตามหน้าจอ', 'hint'); }).catch(function (e) { onGeoErr(e); throw { geoFail: true }; });
+    } else { geoStep = Promise.resolve(); }
+
+    geoStep.then(takeChallenge).then(function (c) {
+      chal = c;
+      var me = store.get('me');
+      var pk = { challenge: unb64u(c.ch), userVerification: 'required', timeout: 60000 };
+      if (me && me.cred) pk.allowCredentials = [{ type: 'public-key', id: unb64u(me.cred) }];
+      return navigator.credentials.get({ publicKey: pk });
+    }).then(function (cred) {
+      assertion = cred;
+      say('กำลังบันทึกเวลาและตำแหน่ง…', 'hint');
+      return geoP || Promise.resolve(geo.fix);
+    }).then(function (fix) {
+      var r = assertion.response;
+      var useFix = fix && (Date.now() - fix.at < 5 * 60000) ? { lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy } : null;
+      return rpc('submitAttendance', {
+        id: assertion.id, clientDataJSON: b64u(r.clientDataJSON), authenticatorData: b64u(r.authenticatorData),
+        signature: b64u(r.signature), mode: mode, geo: useFix, device: deviceLabel()
+      });
+    }).then(function (res) {
+      setBusy(false);
+      if (!res || !res.ok) { failScan(res); return; }
+      store.set('me', { cred: assertion.id, name: res.name, emp: res.employeeId });
+      paintWho(); haptic([18, 40, 18]); hint(); showResult(res); prefetch();
+    }).catch(function (e) {
+      setBusy(false);
+      if (chal && !assertion) pre = chal; // ยังไม่ได้ใช้ challenge เก็บไว้ลองใหม่
+      if (e && e.geoFail) {
+        say(geo.state === 'denied' ? 'ต้องเปิดตำแหน่งก่อนลงเวลา' : 'ยังหาตำแหน่งไม่ได้ ลองอีกครั้งในที่โล่ง', 'error'); haptic(60); return;
+      }
+      if (isDomErr(e)) { var m = waMessage(e, false); say(m.text, m.kind); haptic(60); return; }
+      say('เชื่อมต่อระบบไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง', 'error'); haptic(60);
+    });
+  }
+  function failScan(res) {
+    haptic(60);
+    var code = res && res.code, text = (res && res.message) || 'ลงเวลาไม่สำเร็จ ลองอีกครั้ง';
+    if (code === 'UNKNOWN_DEVICE' || code === 'BAD_ORIGIN' || code === 'BAD_RPID') {
+      store.del('me'); paintWho(); say(text, 'error', 'ลงทะเบียนลายนิ้วมือ', openReg);
+    } else say(text, 'error');
+  }
+  $('#dial').addEventListener('click', scan);
+
+  /* ---------- mode ---------- */
+  var segBtns = Array.prototype.slice.call(document.querySelectorAll('#seg button'));
+  function setMode(m) {
+    mode = m; document.body.setAttribute('data-mode', m);
+    segBtns.forEach(function (b) { var on = b.getAttribute('data-mode') === m; b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; });
+  }
+  segBtns.forEach(function (b, i) {
+    b.addEventListener('click', function () { setMode(b.getAttribute('data-mode')); });
+    b.addEventListener('keydown', function (ev) {
+      var d = ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return; ev.preventDefault();
+      var n = segBtns[(i + d + 3) % 3]; setMode(n.getAttribute('data-mode')); n.focus();
+    });
+  });
+
+  /* ---------- result slip ---------- */
+  var ICON_IN = '<svg class="ar" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6"/></svg>';
+  var ICON_OUT = '<svg class="ar" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H7M12 6l-6 6 6 6"/></svg>';
+  function showResult(r) {
+    var d = $('#dlgResult');
+    d.setAttribute('data-type', r.type);
+    $('#resDup').hidden = !r.duplicate;
+    $('#resStamp').textContent = r.typeLabel;
+    $('#resName').textContent = r.name;
+    $('#resId').textContent = 'รหัส ' + r.employeeId;
+    var t = $('#resTime'); t.textContent = r.time;
+    var sm = document.createElement('small'); sm.textContent = ':' + r.seconds; t.appendChild(sm);
+    $('#resDate').textContent = r.dateLabel;
+    var dur = $('#resDur'); dur.hidden = !r.durationLabel; dur.textContent = r.durationLabel ? 'ทำงานครั้งนี้ ' + r.durationLabel : '';
+    $('#resSite').textContent = r.site || 'ไม่ระบุสถานที่';
+    var pill = $('#resPill'); pill.textContent = r.statusLabel; pill.setAttribute('data-s', r.status);
+    $('#resAddr').textContent = r.address || (r.status === 'NO_LOCATION' ? 'ไม่ได้บันทึกตำแหน่ง' : '');
+    $('#resAddr').hidden = !$('#resAddr').textContent;
+    $('#resDist').textContent = r.distance !== null ? 'ห่างจุดลงเวลา ' + dist(r.distance) : '';
+    $('#resAcc').textContent = r.accuracy !== null ? 'แม่นยำ ±' + r.accuracy + ' ม.' : '';
+    var map = $('#resMap'); map.hidden = !r.mapUrl; if (r.mapUrl) map.href = r.mapUrl;
+    var ul = $('#resList'); ul.innerHTML = '';
+    (r.recent || []).forEach(function (x) {
+      var li = document.createElement('li'); li.setAttribute('data-t', x.type);
+      li.innerHTML = x.type === 'OUT' ? ICON_OUT : ICON_IN;
+      var mid = document.createElement('div');
+      var a = document.createElement('span'); a.textContent = (x.type === 'OUT' ? 'ออกงาน ' : 'เข้างาน ') + x.date;
+      mid.appendChild(a);
+      if (x.site) { var s = document.createElement('span'); s.className = 'site'; s.textContent = x.site + (x.inside ? '' : ' (นอกพื้นที่)'); mid.appendChild(s); }
+      var tm = document.createElement('time'); tm.textContent = x.time;
+      li.appendChild(mid); li.appendChild(tm); ul.appendChild(li);
+    });
+    $('#resRecent').hidden = !(r.recent && r.recent.length);
+    if (!d.open) d.showModal();
+    d.scrollTop = 0;
+  }
+  $('#resDone').addEventListener('click', function () { $('#dlgResult').close(); $('#dial').focus(); });
+
+  /* ---------- registration ---------- */
+  function openReg() {
+    var me = store.get('me');
+    if (me && me.name && this === $('#btnReg')) {
+      // "ไม่ใช่คุณ? เปลี่ยน" → ลืมบัญชีในเครื่อง ให้เลือก passkey ใหม่ตอนสแกน
+      store.del('me'); paintWho(); say('ล้างบัญชีที่จำไว้แล้ว แตะหน้าปัดเพื่อเลือกบัญชีของคุณ', 'hint'); return;
+    }
+    var d = $('#dlgReg');
+    $('#regForm').hidden = false; $('#regDone').hidden = true; $('#regMsg').textContent = ''; $('#regWho').hidden = true;
+    if (!d.open) d.showModal();
+    setTimeout(function () { $('#regEmp').focus(); }, 60);
+  }
+  $('#btnReg').addEventListener('click', openReg);
+  $('#regCode').addEventListener('input', function (e) {
+    var v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    e.target.value = v.length > 4 ? v.slice(0, 4) + '-' + v.slice(4) : v;
+  });
+  $('#regForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var emp = $('#regEmp').value.trim(), code = $('#regCode').value.trim(), go = $('#regGo'), msg = $('#regMsg');
+    msg.textContent = ''; $('#regWho').hidden = true;
+    if (!emp || !code) { msg.textContent = 'กรอกรหัสพนักงานและรหัสลงทะเบียนให้ครบ'; return; }
+    if (!caps.webauthn) { msg.textContent = 'เบราว์เซอร์นี้ไม่รองรับลายนิ้วมือ ลองเปิดใน Chrome หรือ Safari'; return; }
+    go.disabled = true; go.textContent = 'กำลังตรวจรหัส…';
+    var created = null, opts = null;
+    rpc('beginRegistration', emp, code).then(function (o) {
+      if (!o || !o.ok) throw { server: o };
+      opts = o; go.textContent = 'สแกนนิ้วเพื่อผูกเครื่อง…';
+      $('#regWho').hidden = false; $('#regWho').textContent = 'ลงทะเบียนให้ ' + o.user.displayName;
+      return navigator.credentials.create({ publicKey: {
+        rp: { name: o.rpName },
+        user: { id: unb64u(o.user.id), name: o.user.name, displayName: o.user.displayName },
+        challenge: unb64u(o.challenge),
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'required', requireResidentKey: true, userVerification: 'required' },
+        excludeCredentials: (o.excludeIds || []).map(function (id) { return { type: 'public-key', id: unb64u(id) }; }),
+        timeout: 60000, attestation: 'none'
+      } });
+    }).then(function (cred) {
+      created = cred;
+      var r = cred.response;
+      if (typeof r.getPublicKey !== 'function' || !r.getPublicKey() || typeof r.getAuthenticatorData !== 'function') {
+        throw { server: { message: 'เบราว์เซอร์รุ่นนี้เก่าเกินไป อัปเดต Chrome หรือ Safari แล้วลองใหม่' } };
+      }
+      go.textContent = 'กำลังบันทึก…';
+      return rpc('finishRegistration', {
+        employeeId: emp, code: code, id: cred.id, rpId: location.hostname,
+        clientDataJSON: b64u(r.clientDataJSON), authenticatorData: b64u(r.getAuthenticatorData()),
+        publicKey: b64u(r.getPublicKey()), deviceName: deviceLabel()
+      });
+    }).then(function (res) {
+      if (!res || !res.ok) throw { server: res };
+      store.set('me', { cred: created.id, name: res.name, emp: res.employeeId });
+      paintWho(); haptic([18, 40, 18]);
+      $('#regDoneText').textContent = 'สวัสดี ' + res.name + ' แตะหน้าปัดเพื่อลงเวลาได้เลย';
+      $('#regForm').hidden = true; $('#regDone').hidden = false;
+      $('#regForm').reset(); prefetch();
+    }).catch(function (e) {
+      if (e && e.server) msg.textContent = e.server.message || 'ลงทะเบียนไม่สำเร็จ';
+      else if (isDomErr(e)) msg.textContent = waMessage(e, true).text;
+      else msg.textContent = 'เชื่อมต่อระบบไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง';
+      haptic(60);
+    }).then(function () { go.disabled = false; go.textContent = 'ลงทะเบียนและสแกนนิ้ว'; });
+  });
+
+  /* ---------- help ---------- */
+  function row(cls, title, sub) {
+    var mk = cls === 'ok' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+      : cls === 'no' ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+      : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M12 6v7M12 18v.1"/></svg>';
+    var li = document.createElement('li'); li.className = cls;
+    li.innerHTML = '<span class="mk">' + mk + '</span><div><b></b><small></small></div>';
+    li.querySelector('b').textContent = title; li.querySelector('small').textContent = sub;
+    return li;
+  }
+  function refreshCaps() {
+    var p = Promise.resolve();
+    if (caps.webauthn && window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+      p = PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function (v) { caps.uvpa = v; }).catch(function () {});
+    }
+    try {
+      var pp = document.permissionsPolicy || document.featurePolicy;
+      if (pp && pp.allowsFeature) caps.policy = pp.allowsFeature('publickey-credentials-get');
+    } catch (e) {}
+    return p;
+  }
+  function openHelp() {
+    refreshCaps().then(function () {
+      var ul = $('#checks'); ul.innerHTML = '';
+      ul.appendChild(!caps.webauthn ? row('no', 'ลายนิ้วมือสำหรับเว็บ', 'เบราว์เซอร์นี้ไม่รองรับ ใช้ Chrome หรือ Safari รุ่นล่าสุด')
+        : caps.uvpa === false ? row('no', 'ลายนิ้วมือหรือล็อกหน้าจอ', 'ยังไม่ได้ตั้งค่าในเครื่อง ไปที่ตั้งค่า แล้วเพิ่มลายนิ้วมือ')
+        : row('ok', 'ลายนิ้วมือหรือล็อกหน้าจอ', 'พร้อมใช้งาน'));
+      ul.appendChild(caps.policy === false ? row('no', 'สิทธิ์ใช้ลายนิ้วมือในหน้านี้', 'ถูกบล็อกโดยกรอบหน้าเว็บของ Apps Script แจ้งแอดมิน')
+        : row('ok', 'สิทธิ์ใช้ลายนิ้วมือในหน้านี้', caps.policy === null ? 'ไม่พบข้อจำกัด' : 'อนุญาต'));
+      ul.appendChild(geo.state === 'denied' ? row('no', 'ตำแหน่ง', geoBlockedByFrame() ? 'ถูกบล็อกโดยกรอบหน้าเว็บของ Apps Script แจ้งแอดมิน' : 'ยังไม่ได้อนุญาต แตะ “อนุญาตตำแหน่ง” หรือเปิดในการตั้งค่าเบราว์เซอร์')
+        : geo.state === 'ready' ? row('ok', 'ตำแหน่ง', 'ได้ตำแหน่งแล้ว แม่นยำ ±' + Math.round(geo.fix.accuracy) + ' ม.')
+        : row('wait', 'ตำแหน่ง', 'กำลังหา หรือรอการอนุญาต'));
+      $('#tech').textContent = 'โดเมนของหน้านี้: ' + location.hostname + '  เวอร์ชัน ' + BOOT.version;
+      if (!$('#dlgHelp').open) $('#dlgHelp').showModal();
+    });
+  }
+  $('#btnHelp').addEventListener('click', openHelp);
+
+  /* ---------- dialogs ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('dialog'), function (d) {
+    d.addEventListener('click', function (e) {
+      if (e.target === d && d.id !== 'dlgResult') d.close();
+      var c = e.target.closest && e.target.closest('[data-close]'); if (c) d.close();
+    });
+  });
+
+  /* ---------- boot ---------- */
+  paintWho(); paintWhere(); startGeo(); prefetch(); refreshCaps();
+  if (!caps.webauthn) say('เบราว์เซอร์นี้ไม่รองรับการสแกนลายนิ้วมือ ลองเปิดใน Chrome หรือ Safari รุ่นล่าสุด', 'error');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+docs/**
+.git/**
+node_modules/**
+test_webauthn.js
+build_web.py
